@@ -34,8 +34,15 @@ class LazyErrorBoundary extends React.Component {
     console.error('Lazy component failed to load:', error, errorInfo);
     
     // Track error for monitoring
-    if (typeof window !== 'undefined' && window.performanceMonitor) {
-      window.performanceMonitor.trackError(error, 'lazy-component-load');
+if (typeof window !== 'undefined' && window.performanceMonitor) {
+      // Safely serialize error to prevent DataCloneError
+      const safeError = error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      } : String(error);
+      window.performanceMonitor.trackError(safeError, 'lazy-component-load');
     }
   }
 
@@ -114,9 +121,16 @@ const createLazyComponent = (importFn, componentName) => {
     } catch (error) {
       console.error(`Failed to load ${componentName} (attempt ${retryCount + 1}):`, error);
       
-      // Enhanced error tracking
+// Enhanced error tracking
       if (typeof window !== 'undefined' && window.performanceMonitor) {
-        window.performanceMonitor.trackError(error, `lazy-load-${componentName}`);
+        // Safely serialize error to prevent DataCloneError
+        const safeError = error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString()
+        } : String(error);
+        window.performanceMonitor.trackError(safeError, `lazy-load-${componentName}`);
       }
       
       // Detailed error logging with recovery suggestions

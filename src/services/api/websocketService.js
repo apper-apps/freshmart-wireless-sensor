@@ -442,8 +442,9 @@ console.error('Max reconnection attempts reached, giving up');
           timestamp: new Date().toISOString()
         };
       }
+}
       
-// Handle File objects
+      // Handle File objects
       if (typeof File !== 'undefined' && error instanceof File) {
         return {
           __type: 'File',
@@ -453,7 +454,6 @@ console.error('Max reconnection attempts reached, giving up');
           lastModified: error.lastModified,
           timestamp: new Date().toISOString()
         };
-      }
       
       // Handle Blob objects
       if (error instanceof Blob) {
@@ -477,7 +477,6 @@ console.error('Max reconnection attempts reached, giving up');
             
             // Skip DOM nodes
             if (value instanceof Node) continue;
-            
 // Skip Window objects
             if (typeof Window !== 'undefined' && value instanceof Window) continue;
             
@@ -594,8 +593,9 @@ console.error('Max reconnection attempts reached, giving up');
           flags: message.flags
         };
       }
+}
       
-// Handle File objects
+      // Handle File objects
       if (typeof File !== 'undefined' && message instanceof File) {
         return {
           __type: 'File',
@@ -604,7 +604,6 @@ console.error('Max reconnection attempts reached, giving up');
           type: message.type,
           lastModified: message.lastModified
         };
-      }
       
       // Handle Blob objects
       if (message instanceof Blob) {
@@ -638,13 +637,11 @@ console.error('Max reconnection attempts reached, giving up');
               serialized[key] = `[${value.constructor.name}]`;
               continue;
             }
-            
-            // Skip Window objects
+// Skip Window objects
             if (typeof Window !== 'undefined' && value instanceof Window) {
               serialized[key] = `[${value.constructor.name}]`;
               continue;
             }
-            
 // Skip other non-cloneable objects
             if ((typeof HTMLElement !== 'undefined' && value instanceof HTMLElement) || 
                 (typeof Document !== 'undefined' && value instanceof Document) || 
@@ -653,7 +650,6 @@ console.error('Max reconnection attempts reached, giving up');
               serialized[key] = `[${value.constructor.name}]`;
               continue;
             }
-            
             // Handle URL objects in nested structures
             if (value instanceof URL) {
               serialized[key] = {

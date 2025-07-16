@@ -5,7 +5,6 @@ export const fetchPendingApprovals = createAsyncThunk(
   'approvalWorkflow/fetchPending',
   async (_, { rejectWithValue }) => {
     try {
-      const { approvalWorkflowService } = await import('@/services/api/approvalWorkflowService');
       return await approvalWorkflowService.getPendingApprovals();
     } catch (error) {
       return rejectWithValue(error.message);
@@ -17,7 +16,6 @@ export const submitForApproval = createAsyncThunk(
   'approvalWorkflow/submit',
   async (approvalData, { rejectWithValue }) => {
     try {
-      const { approvalWorkflowService } = await import('@/services/api/approvalWorkflowService');
       return await approvalWorkflowService.submitForApproval(approvalData);
     } catch (error) {
       return rejectWithValue(error.message);
@@ -29,7 +27,6 @@ export const approveRequest = createAsyncThunk(
   'approvalWorkflow/approve',
   async ({ requestId, comments }, { rejectWithValue }) => {
     try {
-      const { approvalWorkflowService } = await import('@/services/api/approvalWorkflowService');
       return await approvalWorkflowService.approveRequest(requestId, comments);
     } catch (error) {
       return rejectWithValue(error.message);
@@ -41,7 +38,6 @@ export const rejectRequest = createAsyncThunk(
   'approvalWorkflow/reject',
   async ({ requestId, comments }, { rejectWithValue }) => {
     try {
-      const { approvalWorkflowService } = await import('@/services/api/approvalWorkflowService');
       return await approvalWorkflowService.rejectRequest(requestId, comments);
     } catch (error) {
       return rejectWithValue(error.message);
