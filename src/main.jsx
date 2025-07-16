@@ -242,9 +242,11 @@ function setupMessageHandler() {
   window.addEventListener('message', messageHandler);
   
   // Return cleanup function
-  return () => {
+return () => {
     window.removeEventListener('message', messageHandler);
   };
+}
+
 // Handle unhandled promise rejections from external scripts with coordination
 window.addEventListener('unhandledrejection', (event) => {
   const errorKey = `rejection:${event.reason?.message || 'unknown'}`;
