@@ -4,9 +4,9 @@ import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import { ToastContainer, toast } from "react-toastify";
 import App from "@/App";
+import ErrorComponent from "@/components/ui/Error";
 import { classifyError } from "@/utils/errorHandling";
 import { store } from "@/store/index";
-import ErrorComponent from "@/components/ui/Error";
 
 // Polyfill for structuredClone if not available
 if (typeof structuredClone === 'undefined') {
@@ -21,67 +21,230 @@ if (typeof structuredClone === 'undefined') {
   };
 }
 
-// Polyfill for CustomEvent if not available
-if (typeof CustomEvent === 'undefined') {
-  window.CustomEvent = function(event, params) {
-    params = params || { bubbles: false, cancelable: false, detail: null };
-    const evt = document.createEvent('CustomEvent');
-evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail);
-    return evt;
-  };
+// Enhanced message serialization to handle URL objects and other non-cloneable types
+function serializeForPostMessage(data) {
+  if (data === null || data === undefined) return data;
+  
+  try {
+    // Handle primitive types
+    if (typeof data !== 'object') return data;
+    
+    // Handle URL objects specifically - comprehensive serialization
+    if (data instanceof URL) {
+      return {
+        __type: 'URL',
+        href: data.href,
+        origin: data.origin,
+        protocol: data.protocol,
+        hostname: data.hostname,
+        port: data.port,
+        pathname: data.pathname,
+        search: data.search,
+        hash: data.hash,
+        host: data.host,
+        username: data.username,
+        password: data.password,
+        searchParams: data.searchParams ? Object.fromEntries(data.searchParams) : {}
+      };
+    }
+    
+    // Handle URLSearchParams objects
+    if (data instanceof URLSearchParams) {
+      return {
+        __type: 'URLSearchParams',
+        entries: Object.fromEntries(data)
+      };
+    }
+    
+    // Handle Date objects
+    if (data instanceof Date) {
+      return {
+        __type: 'Date',
+        value: data.toISOString()
+      };
+    }
+    
+    // Handle Error objects
+    if (data instanceof Error) {
+      return {
+        __type: 'Error',
+        name: data.name,
+        message: data.message,
+        stack: data.stack
+      };
+    }
+    
+    // Handle RegExp objects
+    if (data instanceof RegExp) {
+      return {
+        __type: 'RegExp',
+        source: data.source,
+        flags: data.flags
+      };
+    }
+    
+    // Handle File objects
+    if (data instanceof File) {
+      return {
+        __type: 'File',
+        name: data.name,
+        size: data.size,
+        type: data.type,
+        lastModified: data.lastModified
+      };
+    }
+    
+    // Handle Blob objects
+    if (data instanceof Blob) {
+      return {
+        __type: 'Blob',
+        size: data.size,
+        type: data.type
+      };
+    }
+    
+    // Handle arrays
+    if (Array.isArray(data)) {
+      return data.map(item => serializeForPostMessage(item));
+    }
+    
+    // Handle plain objects
+    const serialized = {};
+    for (const key in data) {
+      if (data.hasOwnProperty(key)) {
+        const value = data[key];
+        
+        // Skip functions
+        if (typeof value === 'function') continue;
+        
+        // Skip DOM nodes
+        if (value instanceof Node) continue;
+        
+        // Skip Window objects
+        if (typeof Window !== 'undefined' && value instanceof Window) continue;
+        
+        // Skip other non-cloneable objects
+        if (value instanceof HTMLElement || 
+            value instanceof Document || 
+            value instanceof XMLHttpRequest ||
+            value instanceof WebSocket) continue;
+        
+        // Recursively serialize nested objects
+        serialized[key] = serializeForPostMessage(value);
+      }
+    }
+    
+    return serialized;
+  } catch (error) {
+    console.warn('Serialization failed, returning safe fallback:', error);
+    return {
+      __type: 'SerializationError',
+      message: 'Object could not be serialized',
+      originalType: data?.constructor?.name || typeof data,
+      timestamp: new Date().toISOString()
+    };
+  }
 }
 
-// Error handler coordination to prevent conflicts
-const errorHandlerState = {
-  processing: new Set(),
-  lastError: null,
-  lastErrorTime: 0,
-  debounceMs: 100
-};
+// Enhanced safe message sending with comprehensive error handling
+function sendSafeMessage(targetWindow, message, targetOrigin = "*") {
+  if (!targetWindow || typeof targetWindow.postMessage !== 'function') {
+    console.warn('Invalid target window for postMessage');
+    return false;
+  }
+  
+  try {
+    // First attempt: try direct postMessage
+    targetWindow.postMessage(message, targetOrigin);
+    return true;
+  } catch (error) {
+    if (error.name === 'DataCloneError') {
+      console.warn('DataCloneError detected, attempting safe serialization');
+      
+      try {
+        // Second attempt: serialize the message
+        const serializedMessage = serializeForPostMessage(message);
+        targetWindow.postMessage(serializedMessage, targetOrigin);
+        return true;
+      } catch (serializedError) {
+        console.error('Failed to send serialized message:', serializedError);
+        
+        // Third attempt: minimal fallback message
+        try {
+          const fallbackMessage = {
+            __type: 'PostMessageFallback',
+            timestamp: new Date().toISOString(),
+            originalError: error.message,
+            targetOrigin,
+            attempt: 'fallback'
+          };
+          targetWindow.postMessage(fallbackMessage, targetOrigin);
+          return true;
+        } catch (fallbackError) {
+          console.error('All postMessage attempts failed:', fallbackError);
+          return false;
+        }
+      }
+    } else {
+      console.error('PostMessage error (not DataCloneError):', error);
+      return false;
+    }
+  }
+}
 
-// Global error handlers for external script errors with coordination
-window.addEventListener('error', (event) => {
-  const errorKey = `${event.filename}:${event.lineno}:${event.message}`;
-  const now = Date.now();
+// Enhanced message handler setup
+function setupMessageHandler() {
+  const messageHandler = (event) => {
+    try {
+      // Enhanced security checks
+      if (!event.origin) {
+        console.warn('Message received without origin');
+        return;
+      }
+      
+      // Check for allowed origins
+      const allowedOrigins = [
+        'https://apper.integrately.com',
+        'https://integrately.com',
+        window.location.origin
+      ];
+      
+      if (!allowedOrigins.includes(event.origin)) {
+        console.warn('Message from unauthorized origin:', event.origin);
+        return;
+      }
+      
+      const data = event.data;
+      
+      // Handle deserialization of custom types
+      if (data && typeof data === 'object' && data.__type) {
+        switch (data.__type) {
+          case 'URL':
+            console.log('Received URL object data:', data);
+            break;
+          case 'PostMessageFallback':
+            console.warn('Received fallback message due to serialization error:', data);
+            break;
+          case 'SerializationError':
+            console.error('Received serialization error:', data);
+            break;
+          default:
+            console.log('Received custom type:', data.__type);
+        }
+      }
+      
+      console.log('Message received from', event.origin, ':', data);
+    } catch (error) {
+      console.error('Error handling received message:', error);
+    }
+  };
   
-  // Debounce identical errors
-  if (errorHandlerState.lastError === errorKey && 
-      now - errorHandlerState.lastErrorTime < errorHandlerState.debounceMs) {
-    return false;
-  }
+  window.addEventListener('message', messageHandler);
   
-  // Prevent concurrent processing of same error
-  if (errorHandlerState.processing.has(errorKey)) {
-    return false;
-  }
-  
-  // Handle errors from external scripts like Apper CDN
-  if (event.filename && event.filename.includes('apper.io')) {
-    errorHandlerState.processing.add(errorKey);
-    errorHandlerState.lastError = errorKey;
-    errorHandlerState.lastErrorTime = now;
-    
-    console.warn('External Apper script error intercepted:', {
-      message: event.message,
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno,
-      timestamp: now
-    });
-    
-    // Clean up processing state after a delay
-    setTimeout(() => {
-      errorHandlerState.processing.delete(errorKey);
-    }, 1000);
-    
-    // Prevent the error from breaking the application
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-    return false;
-  }
-});
-
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('message', messageHandler);
+  };
 // Handle unhandled promise rejections from external scripts with coordination
 window.addEventListener('unhandledrejection', (event) => {
   const errorKey = `rejection:${event.reason?.message || 'unknown'}`;
@@ -124,31 +287,65 @@ const postMessageState = {
 
 window.postMessage = function(message, targetOrigin, transfer) {
   const attemptKey = `${targetOrigin}:${Date.now()}`;
-try {
-    // Test if message can be cloned
+  
+  try {
+    // Enhanced pre-flight check for URL objects and other non-cloneable types
+    if (message && typeof message === 'object') {
+      // Check for URL objects specifically
+      if (message instanceof URL || 
+          (message.constructor && message.constructor.name === 'URL')) {
+        console.warn('URL object detected in postMessage, serializing safely');
+        const serializedMessage = serializeForPostMessage(message);
+        return originalPostMessage.call(this, serializedMessage, targetOrigin, transfer);
+      }
+      
+      // Check for other known non-cloneable types
+      const hasNonCloneableTypes = JSON.stringify(message, (key, value) => {
+        if (value instanceof URL || 
+            value instanceof File || 
+            value instanceof Blob ||
+            value instanceof RegExp ||
+            value instanceof Error ||
+            (typeof value === 'object' && value !== null && value.constructor && 
+             ['URL', 'File', 'Blob', 'RegExp', 'Error'].includes(value.constructor.name))) {
+          throw new Error('Non-cloneable object detected');
+        }
+        return value;
+      });
+    }
+    
+    // Test if message can be cloned using structuredClone
     window.structuredClone(message);
     return originalPostMessage.call(this, message, targetOrigin, transfer);
   } catch (error) {
-    if (error.name === 'DataCloneError') {
-      console.warn('PostMessage DataCloneError prevented, sanitizing message');
+    if (error.name === 'DataCloneError' || error.message.includes('Non-cloneable object detected')) {
+      console.warn('PostMessage DataCloneError prevented, sanitizing message:', error.message);
       
       try {
         const sanitizedMessage = serializeForPostMessage(message);
+        console.log('Successfully serialized message for postMessage');
         return originalPostMessage.call(this, sanitizedMessage, targetOrigin, transfer);
       } catch (sanitizeError) {
         console.error('Failed to sanitize message:', sanitizeError);
         
-        // Fallback to minimal safe message
+        // Enhanced fallback with more context
         const fallbackMessage = {
           __type: 'PostMessageFallback',
           timestamp: Date.now(),
           originalError: error.message,
-          targetOrigin
+          sanitizeError: sanitizeError.message,
+          targetOrigin,
+          messageType: typeof message,
+          messageConstructor: message?.constructor?.name || 'unknown',
+          attempt: 'fallback'
         };
         
         return originalPostMessage.call(this, fallbackMessage, targetOrigin, transfer);
       }
     }
+    
+    // Re-throw non-DataCloneError errors
+    console.error('PostMessage error (not DataCloneError):', error);
     throw error;
   }
 };

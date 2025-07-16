@@ -1,3 +1,5 @@
+import React from "react";
+import Error from "@/components/ui/Error";
 class WebSocketService {
   constructor() {
     this.connection = null;
@@ -387,7 +389,7 @@ console.error('Max reconnection attempts reached, giving up');
     }, delay);
   }
 
-// Safe error serialization to prevent DataCloneError
+// Enhanced safe error serialization to prevent DataCloneError
   serializeErrorSafely(error) {
     if (!error) return 'Unknown error';
     
@@ -395,6 +397,7 @@ console.error('Max reconnection attempts reached, giving up');
       // Handle different error types
       if (error instanceof Error) {
         return {
+          __type: 'Error',
           name: error.name,
           message: error.message,
           stack: error.stack,
@@ -402,13 +405,30 @@ console.error('Max reconnection attempts reached, giving up');
         };
       }
       
-      // Handle URL objects that can't be cloned
+      // Handle URL objects that can't be cloned - comprehensive serialization
       if (error instanceof URL) {
         return {
-          type: 'URL',
+          __type: 'URL',
           href: error.href,
           origin: error.origin,
           pathname: error.pathname,
+          search: error.search,
+          hash: error.hash,
+          protocol: error.protocol,
+          hostname: error.hostname,
+          port: error.port,
+          host: error.host,
+          username: error.username,
+          password: error.password,
+          timestamp: new Date().toISOString()
+        };
+      }
+      
+      // Handle URLSearchParams objects
+      if (error instanceof URLSearchParams) {
+        return {
+          __type: 'URLSearchParams',
+          entries: Object.fromEntries(error),
           timestamp: new Date().toISOString()
         };
       }
@@ -416,9 +436,31 @@ console.error('Max reconnection attempts reached, giving up');
       // Handle DOM events or other non-serializable objects
       if (error.target && error.type) {
         return {
-          type: 'Event',
+          __type: 'Event',
           eventType: error.type,
           target: error.target.constructor.name,
+          timestamp: new Date().toISOString()
+        };
+      }
+      
+// Handle File objects
+      if (typeof File !== 'undefined' && error instanceof File) {
+        return {
+          __type: 'File',
+          name: error.name,
+          size: error.size,
+          type: error.type,
+          lastModified: error.lastModified,
+          timestamp: new Date().toISOString()
+        };
+      }
+      
+      // Handle Blob objects
+      if (error instanceof Blob) {
+        return {
+          __type: 'Blob',
+          size: error.size,
+          type: error.type,
           timestamp: new Date().toISOString()
         };
       }
@@ -430,11 +472,42 @@ console.error('Max reconnection attempts reached, giving up');
           try {
             const value = error[key];
             
-// Skip functions and non-serializable objects
+            // Skip functions and non-serializable objects
             if (typeof value === 'function') continue;
             
             // Skip DOM nodes
             if (value instanceof Node) continue;
+            
+// Skip Window objects
+            if (typeof Window !== 'undefined' && value instanceof Window) continue;
+            
+            // Handle URL objects in error properties
+            if (value instanceof URL) {
+              serialized[key] = {
+                __type: 'URL',
+                href: value.href,
+                origin: value.origin,
+                pathname: value.pathname,
+                search: value.search,
+                hash: value.hash,
+                protocol: value.protocol,
+                hostname: value.hostname,
+                port: value.port,
+                host: value.host,
+                username: value.username,
+                password: value.password
+              };
+              continue;
+            }
+            
+            // Handle URLSearchParams in error properties
+            if (value instanceof URLSearchParams) {
+              serialized[key] = {
+                __type: 'URLSearchParams',
+                entries: Object.fromEntries(value)
+              };
+              continue;
+            }
             
             // Try to serialize the value
             JSON.stringify(value);
@@ -445,18 +518,25 @@ console.error('Max reconnection attempts reached, giving up');
           }
         }
         
+        serialized.__type = 'SerializedError';
         serialized.timestamp = new Date().toISOString();
         return serialized;
       }
       
       // For non-objects, return as string
       return String(error);
-    } catch (error) {
-      return 'Serialization failed: ' + String(error);
+    } catch (serializationError) {
+      return {
+        __type: 'SerializationError',
+        message: 'Error serialization failed',
+        originalError: String(error),
+        serializationError: String(serializationError),
+        timestamp: new Date().toISOString()
+      };
     }
   }
   
-  // Safe message serialization to prevent DataCloneError
+// Enhanced safe message serialization to prevent DataCloneError
   serializeMessageSafely(message) {
     if (!message) return null;
     
@@ -466,10 +546,10 @@ console.error('Max reconnection attempts reached, giving up');
         return message;
       }
       
-      // Handle URL objects specifically - convert to plain object
+      // Handle URL objects specifically - comprehensive serialization
       if (message instanceof URL) {
         return {
-          type: 'URL',
+          __type: 'URL',
           href: message.href,
           origin: message.origin,
           pathname: message.pathname,
@@ -477,14 +557,26 @@ console.error('Max reconnection attempts reached, giving up');
           hash: message.hash,
           protocol: message.protocol,
           hostname: message.hostname,
-          port: message.port
+          port: message.port,
+          host: message.host,
+          username: message.username,
+          password: message.password,
+          searchParams: message.searchParams ? Object.fromEntries(message.searchParams) : {}
+        };
+      }
+      
+      // Handle URLSearchParams objects
+      if (message instanceof URLSearchParams) {
+        return {
+          __type: 'URLSearchParams',
+          entries: Object.fromEntries(message)
         };
       }
       
       // Handle Date objects
       if (message instanceof Date) {
         return {
-          type: 'Date',
+          __type: 'Date',
           value: message.toISOString()
         };
       }
@@ -492,6 +584,35 @@ console.error('Max reconnection attempts reached, giving up');
       // Handle Error objects
       if (message instanceof Error) {
         return this.serializeErrorSafely(message);
+      }
+      
+      // Handle RegExp objects
+      if (message instanceof RegExp) {
+        return {
+          __type: 'RegExp',
+          source: message.source,
+          flags: message.flags
+        };
+      }
+      
+// Handle File objects
+      if (typeof File !== 'undefined' && message instanceof File) {
+        return {
+          __type: 'File',
+          name: message.name,
+          size: message.size,
+          type: message.type,
+          lastModified: message.lastModified
+        };
+      }
+      
+      // Handle Blob objects
+      if (message instanceof Blob) {
+        return {
+          __type: 'Blob',
+          size: message.size,
+          type: message.type
+        };
       }
       
       // Handle arrays
@@ -524,10 +645,19 @@ console.error('Max reconnection attempts reached, giving up');
               continue;
             }
             
-            // Handle URL objects
+// Skip other non-cloneable objects
+            if ((typeof HTMLElement !== 'undefined' && value instanceof HTMLElement) || 
+                (typeof Document !== 'undefined' && value instanceof Document) || 
+                (typeof XMLHttpRequest !== 'undefined' && value instanceof XMLHttpRequest) ||
+                (typeof WebSocket !== 'undefined' && value instanceof WebSocket)) {
+              serialized[key] = `[${value.constructor.name}]`;
+              continue;
+            }
+            
+            // Handle URL objects in nested structures
             if (value instanceof URL) {
               serialized[key] = {
-                type: 'URL',
+                __type: 'URL',
                 href: value.href,
                 origin: value.origin,
                 pathname: value.pathname,
@@ -535,7 +665,20 @@ console.error('Max reconnection attempts reached, giving up');
                 hash: value.hash,
                 protocol: value.protocol,
                 hostname: value.hostname,
-                port: value.port
+                port: value.port,
+                host: value.host,
+                username: value.username,
+                password: value.password,
+                searchParams: value.searchParams ? Object.fromEntries(value.searchParams) : {}
+              };
+              continue;
+            }
+            
+            // Handle URLSearchParams in nested structures
+            if (value instanceof URLSearchParams) {
+              serialized[key] = {
+                __type: 'URLSearchParams',
+                entries: Object.fromEntries(value)
               };
               continue;
             }
@@ -547,6 +690,7 @@ console.error('Max reconnection attempts reached, giving up');
               serialized[key] = value;
             }
           } catch (serializationError) {
+            console.warn(`Failed to serialize property '${key}':`, serializationError);
             serialized[key] = String(message[key]);
           }
         }
@@ -554,7 +698,14 @@ console.error('Max reconnection attempts reached, giving up');
       
       return serialized;
     } catch (error) {
-      return String(message);
+      console.error('Complete message serialization failed:', error);
+      return {
+        __type: 'SerializationError',
+        message: 'Object could not be serialized',
+        originalType: message?.constructor?.name || typeof message,
+        timestamp: new Date().toISOString(),
+        error: error.message
+      };
     }
   }
   

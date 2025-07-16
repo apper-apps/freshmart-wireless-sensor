@@ -439,16 +439,55 @@ useEffect(() => {
         // Don't set SDK error state - just log it
       }
       
-      // Handle DataCloneError specifically for postMessage operations
+// Handle DataCloneError specifically for postMessage operations
       if (event.reason?.name === 'DataCloneError' || event.error?.name === 'DataCloneError') {
         console.warn('DataCloneError detected - likely from postMessage with non-cloneable objects:', event);
-        // Log the error but don't crash the app
+        
+        // Enhanced logging for DataCloneError debugging
+        console.warn('DataCloneError context:', {
+          message: event.reason?.message || event.error?.message,
+          stack: event.reason?.stack || event.error?.stack,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: window.location.href
+        });
+        
+        // Prevent default to stop error propagation
+        event.preventDefault();
+        return;
+      }
+      
+      // Handle URL-related errors
+      if (event.reason?.message?.includes('URL') || event.error?.message?.includes('URL')) {
+        console.warn('URL-related error detected:', event);
+        event.preventDefault();
+        return;
+      }
+      
+      // Handle postMessage related errors
+      if (event.reason?.message?.includes('postMessage') || event.error?.message?.includes('postMessage')) {
+        console.warn('PostMessage error detected:', event);
+        event.preventDefault();
+        return;
       }
     };
 
     const handleMessageError = (event) => {
       console.warn('Message error detected:', event);
+      
+      // Enhanced message error handling
+      console.warn('Message error context:', {
+        origin: event.origin,
+        source: event.source,
+        data: event.data,
+        timestamp: new Date().toISOString(),
+        ports: event.ports
+      });
+      
       // Handle postMessage errors gracefully
+      if (event.data && typeof event.data === 'object' && event.data.__type === 'PostMessageFallback') {
+        console.warn('Received fallback message due to serialization error:', event.data);
+      }
     };
     
     window.addEventListener('unhandledrejection', handleError);
