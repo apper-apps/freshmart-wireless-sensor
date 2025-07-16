@@ -2,16 +2,15 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
-import { formatCurrency } from "@/utils/currency";
 import ApperIcon from "@/components/ApperIcon";
-import Badge from "@/components/atoms/Badge";
 import Empty from "@/components/ui/Empty";
 import Error from "@/components/ui/Error";
 import Loading from "@/components/ui/Loading";
 import OrderStatusBadge from "@/components/molecules/OrderStatusBadge";
-import { clipboardService } from "@/services/ClipboardService";
+import Badge from "@/components/atoms/Badge";
+import clipboardService from "@/services/ClipboardService";
 import { orderService } from "@/services/api/orderService";
-
+import formatCurrency from "@/utils/currency";
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -139,28 +138,30 @@ className="flex items-center space-x-2 text-primary hover:text-primary-dark tran
               {/* Mobile-responsive status and total */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
                 <div className="flex items-center space-x-2">
-                  <OrderStatusBadge status={order.status} />
+<OrderStatusBadge status={order.status} />
                   {/* Approval Status Badge */}
                   {order.approvalStatus && (
                     <div className="flex items-center space-x-1">
-                      {order.approvalStatus === 'approved' && (
-                        <Badge variant="success" className="text-xs">
-                          <ApperIcon name="CheckCircle" size={12} className="mr-1" />
-                          Approved
-                        </Badge>
-                      )}
-{order.approvalStatus === 'pending' && (
-                        <Badge variant="warning" className="text-xs animate-pulse">
-                          <ApperIcon name="Clock" size={12} className="mr-1" />
-                          Pending Approval
-                        </Badge>
-                      )}
-                      {order.approvalStatus === 'rejected' && (
-                        <Badge variant="danger" className="text-xs">
-                          <ApperIcon name="XCircle" size={12} className="mr-1" />
-                          Rejected
-                        </Badge>
-                      )}
+                      <>
+                        {order.approvalStatus === 'approved' && (
+                          <Badge variant="success" className="text-xs">
+                            <ApperIcon name="CheckCircle" size={12} className="mr-1" />
+                            Approved
+                          </Badge>
+                        )}
+                        {order.approvalStatus === 'pending' && (
+                          <Badge variant="warning" className="text-xs animate-pulse">
+                            <ApperIcon name="Clock" size={12} className="mr-1" />
+                            Pending Approval
+                          </Badge>
+                        )}
+                        {order.approvalStatus === 'rejected' && (
+                          <Badge variant="danger" className="text-xs">
+                            <ApperIcon name="XCircle" size={12} className="mr-1" />
+                            Rejected
+                          </Badge>
+                        )}
+                      </>
                     </div>
                   )}
                 </div>
