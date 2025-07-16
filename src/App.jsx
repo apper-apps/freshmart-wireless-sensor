@@ -241,32 +241,62 @@ useEffect(() => {
           dispatch(setConnectionStatus(true));
           reconnectAttempts = 0; // Reset on successful connection
 
-          // Subscribe to price approval updates with error handling
+// Subscribe to price approval updates with error handling and safe serialization
           const unsubscribeApprovals = webSocketService.subscribe('price-approvals', (data) => {
             try {
-              dispatch(updateApprovalStatus(data));
+              // Serialize data safely before dispatching to prevent DataCloneError
+              const safeData = webSocketService.serializeMessageSafely(data);
+              
+              dispatch(updateApprovalStatus(safeData));
               dispatch(addRealTimeNotification({
                 id: Date.now(),
                 type: 'approval_update',
-                message: `Price approval ${data.status} for order #${data.orderId}`,
+                message: `Price approval ${safeData.status || 'updated'} for order #${safeData.orderId || 'unknown'}`,
                 timestamp: new Date().toISOString()
               }));
             } catch (error) {
               console.error('Error processing approval update:', error);
+              
+              // Dispatch error notification with safe serialization
+              try {
+                dispatch(addRealTimeNotification({
+                  id: Date.now(),
+                  type: 'error',
+                  message: 'Failed to process approval update',
+                  timestamp: new Date().toISOString()
+                }));
+              } catch (dispatchError) {
+                console.error('Failed to dispatch error notification:', dispatchError);
+              }
             }
           });
 
-          // Handle approval update events with error boundaries
+          // Handle approval update events with error boundaries and safe serialization
           const handleApprovalUpdate = (data) => {
             try {
+              // Serialize data safely before dispatching to prevent DataCloneError
+              const safeData = webSocketService.serializeMessageSafely(data);
+              
               dispatch(updateApprovalStatus({
-                requestId: data.requestId || data.orderId,
-                status: data.status,
-                approvedBy: data.approvedBy,
-                comments: data.comments
+                requestId: safeData.requestId || safeData.orderId,
+                status: safeData.status,
+                approvedBy: safeData.approvedBy,
+                comments: safeData.comments
               }));
             } catch (error) {
               console.error('Error handling approval update:', error);
+              
+              // Dispatch error notification with safe serialization
+              try {
+                dispatch(addRealTimeNotification({
+                  id: Date.now(),
+                  type: 'error',
+                  message: 'Failed to handle approval update',
+                  timestamp: new Date().toISOString()
+                }));
+              } catch (dispatchError) {
+                console.error('Failed to dispatch error notification:', dispatchError);
+              }
             }
           };
 
@@ -281,13 +311,18 @@ useEffect(() => {
               console.error('Error cleaning up WebSocket subscriptions:', error);
             }
           };
-        } catch (error) {
+} catch (error) {
           console.warn('WebSocket connection failed:', error);
           dispatch(setConnectionStatus(false));
           
-          // Track WebSocket errors
+          // Track WebSocket errors with safe serialization
           if (typeof window !== 'undefined' && window.performanceMonitor) {
-            window.performanceMonitor.trackError(error, 'websocket-connection');
+            try {
+              const safeError = webSocketService.serializeErrorSafely(error);
+              window.performanceMonitor.trackError(safeError, 'websocket-connection');
+            } catch (trackingError) {
+              console.error('Failed to track WebSocket error:', trackingError);
+            }
           }
           
           // Implement exponential backoff reconnection
@@ -301,13 +336,17 @@ useEffect(() => {
             }, delay);
           } else {
             console.error('Max WebSocket reconnection attempts reached');
-            // Dispatch error notification
-            dispatch(addRealTimeNotification({
-              id: Date.now(),
-              type: 'connection_error',
-              message: 'Real-time updates unavailable. Please refresh the page.',
-              timestamp: new Date().toISOString()
-            }));
+            // Dispatch error notification with safe serialization
+            try {
+              dispatch(addRealTimeNotification({
+                id: Date.now(),
+                type: 'connection_error',
+                message: 'Real-time updates unavailable. Please refresh the page.',
+                timestamp: new Date().toISOString()
+              }));
+            } catch (dispatchError) {
+              console.error('Failed to dispatch connection error notification:', dispatchError);
+            }
           }
         }
       };

@@ -191,16 +191,16 @@ requestId: Math.floor(Math.random() * 10) + 1,
           }
         };
 
-      case 'vendor_payment_processed':
+case 'vendor_payment_processed':
         return {
           ...baseMessage,
           data: {
             orderId: Math.floor(Math.random() * 100) + 1,
             vendorId: Math.floor(Math.random() * 3) + 1,
             amount: Math.floor(Math.random() * 5000) + 500,
-            paymentMethod: ['jazzcash', 'easypaisa', 'bank'][Math.floor(Math.random() * 3)],
-            timestamp: new Date().toISOString(),
-            status: 'processed'
+            vendor: 'Fresh Foods Co.',
+            status: 'processed',
+            timestamp: new Date().toISOString()
           }
         };
 
@@ -209,11 +209,10 @@ requestId: Math.floor(Math.random() * 10) + 1,
           ...baseMessage,
           data: {
             orderId: Math.floor(Math.random() * 100) + 1,
-            adminId: 'admin_1',
             amount: Math.floor(Math.random() * 5000) + 500,
-            proofUploaded: true,
-            timestamp: new Date().toISOString(),
-            status: 'confirmed'
+            confirmedBy: 'admin_1',
+            paymentMethod: 'bank_transfer',
+            timestamp: new Date().toISOString()
           }
         };
 
@@ -333,11 +332,18 @@ requestId: Math.floor(Math.random() * 10) + 1,
   }
 
   // Send message through WebSocket
+// Send message through WebSocket
   send(message) {
     if (this.connection && this.connection.readyState === WebSocket.OPEN) {
-      const messageString = typeof message === 'string' ? message : JSON.stringify(message);
-      this.connection.send(messageString);
-      return true;
+      try {
+        const serializedMessage = this.serializeMessageSafely(message);
+        const messageString = typeof serializedMessage === 'string' ? serializedMessage : JSON.stringify(serializedMessage);
+        this.connection.send(messageString);
+        return true;
+      } catch (error) {
+        console.error('Error sending message:', error);
+        return false;
+      }
     } else {
       console.warn('WebSocket not connected, message not sent:', message);
       return false;
@@ -352,7 +358,6 @@ requestId: Math.floor(Math.random() * 10) + 1,
       }
     }, 30000); // Every 30 seconds
   }
-
   stopHeartbeat() {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
