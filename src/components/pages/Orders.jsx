@@ -507,7 +507,7 @@ document.body.appendChild(modal);
                       <span className="font-semibold text-purple-900">
                         {formatCurrency(order.walletTransaction.amount)}
                       </span>
-                    </div>
+</div>
                   </div>
                 </div>
               )}
