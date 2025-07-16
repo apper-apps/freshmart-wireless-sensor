@@ -22,8 +22,8 @@ if (typeof structuredClone === 'undefined') {
 }
 
 
-// Enhanced message handler setup
-function setupMessageHandler() {
+// Enhanced basic message handler setup
+function setupBasicMessageHandler() {
   const messageHandler = (event) => {
     try {
       // Enhanced security checks
@@ -72,11 +72,18 @@ function setupMessageHandler() {
   window.addEventListener('message', messageHandler);
   
   // Return cleanup function
-return () => {
+  return () => {
     window.removeEventListener('message', messageHandler);
   };
 }
 
+// Error handler state for coordination
+const errorHandlerState = {
+  lastError: null,
+  lastErrorTime: 0,
+  debounceMs: 1000,
+  processing: new Set()
+};
 // Handle unhandled promise rejections from external scripts with coordination
 window.addEventListener('unhandledrejection', (event) => {
   const errorKey = `rejection:${event.reason?.message || 'unknown'}`;
@@ -846,8 +853,8 @@ getErrorSummary() {
 // Missing function for SDK initialization
 async function initializeSDK() {
   try {
-    // Setup message handler
-    window.addEventListener('message', handleSDKMessage);
+    // Setup basic message handler
+    const cleanupBasicHandler = setupBasicMessageHandler();
     
     // Setup performance monitoring
     if (typeof window !== 'undefined') {
@@ -855,9 +862,13 @@ async function initializeSDK() {
     }
     
     console.log('SDK initialized successfully');
+    
+    // Return cleanup function
+    return cleanupBasicHandler;
   } catch (error) {
     console.warn('SDK initialization failed:', error);
     performanceMonitor.trackError(error, 'sdk-init-error');
+    return () => {}; // Return empty cleanup function
   }
 }
 // Missing function for SDK message handling
