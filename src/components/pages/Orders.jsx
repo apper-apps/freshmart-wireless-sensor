@@ -98,11 +98,10 @@ className="flex items-center space-x-2 text-primary hover:text-primary-dark tran
         </Link>
       </div>
       {/* Mobile-first responsive order cards */}
-      <div className="space-y-4 sm:space-y-6">
+<div className="space-y-4 sm:space-y-6">
         {orders.map((order) => (
           <div key={order.id} className="card p-4 sm:p-6 hover:shadow-premium transition-shadow duration-300 mobile-order-card">
             {/* Mobile-optimized header */}
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
               <div className="flex items-start space-x-3 sm:space-x-4 mb-3 sm:mb-0">
                 <div className="bg-gradient-to-r from-primary to-accent p-2 sm:p-3 rounded-lg flex-shrink-0">
                   <ApperIcon name="Package" size={20} className="text-white sm:w-6 sm:h-6" />
@@ -135,11 +134,11 @@ className="flex items-center space-x-2 text-primary hover:text-primary-dark tran
                 </div>
               </div>
               
-              {/* Mobile-responsive status and total */}
+{/* Mobile-responsive status and total */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
                 <div className="flex items-center space-x-2">
-<OrderStatusBadge status={order.status} />
-{/* Approval Status Badge */}
+                  <OrderStatusBadge status={order.status} />
+                  {/* Approval Status Badge */}
                   {order.approvalStatus && (
                     <div className="flex items-center space-x-1">
                       {order.approvalStatus === 'approved' && (
@@ -162,7 +161,7 @@ className="flex items-center space-x-2 text-primary hover:text-primary-dark tran
                       )}
                     </div>
                   )}
-</div>
+                </div>
                 {(order.paymentMethod === 'jazzcash' || order.paymentMethod === 'easypaisa' || order.paymentMethod === 'bank') && (
                   <div className="flex items-center space-x-1">
                     {order.verificationStatus === 'verified' && (
@@ -244,11 +243,11 @@ className="flex items-center space-x-2 text-primary hover:text-primary-dark tran
                           {statusLabels[status]}
                         </span>
                         {isActive && (
+{isActive && (
                           <div className="w-2 h-2 bg-primary rounded-full mt-1 animate-pulse"></div>
                         )}
                       </div>
-);
-                  })}
+                    );
                 </div>
               </div>
             </div>
@@ -363,11 +362,11 @@ className="flex items-center space-x-2 text-primary hover:text-primary-dark tran
                                     </div>
                                   `;
                                   modal.onclick = (e) => {
-                                    if (e.target === modal || e.target.tagName === 'BUTTON' || e.target.tagName === 'svg' || e.target.tagName === 'line') {
+if (e.target === modal || e.target.tagName === 'BUTTON' || e.target.tagName === 'svg' || e.target.tagName === 'line') {
                                       document.body.removeChild(modal);
                                     }
                                   };
-document.body.appendChild(modal);
+                                  document.body.appendChild(modal);
                                 }}
                               />
                               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 flex items-center justify-center rounded-lg transition-all">
@@ -453,13 +452,13 @@ document.body.appendChild(modal);
               <div className="hidden sm:flex flex-wrap gap-2 sm:gap-3">
                 <Link 
                   to={`/orders/${order.id}`}
-                  className="flex items-center space-x-1 sm:space-x-2 text-primary hover:text-primary-dark transition-colors text-sm bg-primary/5 px-3 py-1.5 rounded-lg"
+className="flex items-center space-x-1 sm:space-x-2 text-primary hover:text-primary-dark transition-colors text-sm bg-primary/5 px-3 py-1.5 rounded-lg"
                 >
                   <ApperIcon name="Eye" size={14} />
                   <span>View Details</span>
                 </Link>
                 
-<button className="flex items-center space-x-1 sm:space-x-2 text-blue-600 hover:text-blue-700 transition-colors text-sm bg-blue-50 px-3 py-1.5 rounded-lg">
+                <button className="flex items-center space-x-1 sm:space-x-2 text-blue-600 hover:text-blue-700 transition-colors text-sm bg-blue-50 px-3 py-1.5 rounded-lg">
                   <ApperIcon name="MessageCircle" size={14} />
                   <span>Chat Support</span>
                 </button>
@@ -498,16 +497,16 @@ document.body.appendChild(modal);
                     </div>
                     <div className="flex justify-between">
                       <span className="text-purple-700">Type:</span>
-                      <span className="font-medium text-purple-900 capitalize">
+<span className="font-medium text-purple-900 capitalize">
                         {order.walletTransaction.type.replace('_', ' ')}
                       </span>
                     </div>
-<div className="flex justify-between">
+                    <div className="flex justify-between">
                       <span className="text-purple-700">Amount:</span>
                       <span className="font-semibold text-purple-900">
                         {formatCurrency(order.walletTransaction.amount)}
                       </span>
-</div>
+                    </div>
                   </div>
                 </div>
               )}
