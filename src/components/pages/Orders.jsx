@@ -2,14 +2,14 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
-import { formatCurrency } from "@/utils/currency";
+import formatCurrency from "@/utils/currency";
 import ApperIcon from "@/components/ApperIcon";
-import { Badge } from "@/components/atoms/Badge";
+import Badge from "@/components/atoms/Badge";
 import Empty from "@/components/ui/Empty";
 import Error from "@/components/ui/Error";
 import Loading from "@/components/ui/Loading";
 import OrderStatusBadge from "@/components/molecules/OrderStatusBadge";
-import { clipboardService } from "@/services/ClipboardService";
+import clipboardService from "@/services/ClipboardService";
 import { orderService } from "@/services/api/orderService";
 
 const Orders = () => {
@@ -157,11 +157,10 @@ className="flex items-center space-x-2 text-primary hover:text-primary-dark tran
                       )}
                       {order.approvalStatus === 'rejected' && (
                         <Badge variant="danger" className="text-xs">
-                          <ApperIcon name="XCircle" size={12} className="mr-1" />
-                          Rejected
+Rejected
                         </Badge>
                       )}
-</div>
+                    </div>
                   )}
                 </div>
                 <>
@@ -372,11 +371,11 @@ className="flex items-center space-x-2 text-primary hover:text-primary-dark tran
                                   };
                                   document.body.appendChild(modal);
                                 }}
-                              />
+/>
                               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 flex items-center justify-center rounded-lg transition-all">
                                 <ApperIcon name="Eye" size={14} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                               </div>
-</div>
+                            </div>
                           </div>
                         </div>
                       </div>
